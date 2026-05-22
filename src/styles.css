@@ -1,6 +1,8 @@
 :root {
   color-scheme: light;
-  font-family: system-ui, sans-serif;
+  font-family: Inter, system-ui, sans-serif;
+  background: #eef4ff;
+  color: #0f172a;
 }
 
 html,
@@ -11,76 +13,82 @@ body,
 }
 
 body {
-  background: #f5f7fb;
-  color: #111827;
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.12), transparent 24%),
+    #eef4ff;
 }
 
 .shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 280px;
+  grid-template-columns: 270px minmax(0, 1fr) 270px;
   gap: 16px;
   padding: 16px;
   box-sizing: border-box;
 }
 
-.panel {
-  padding: 24px 28px;
-  border: 1px solid #d1d5db;
-  border-radius: 12px;
-  background: white;
-}
-
 .rail,
 .canvas {
-  background: #ffffff;
-  border: 1px solid #dbe3ee;
-  border-radius: 12px;
-  padding: 16px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 18px;
+  padding: 18px;
   box-sizing: border-box;
+  backdrop-filter: blur(12px);
 }
 
 .brand h1,
 .brand h2,
-.header h2 {
+.hero h2,
+.schema-card h3 {
   margin: 0;
+  line-height: 1.05;
 }
 
 .brand p,
-.header p,
+.hero p,
 .api-list,
 .case-list button span,
 .event,
-.stats span {
+.status-tile span,
+.schema-note {
   color: #475569;
 }
 
 .eyebrow,
 .chart-title {
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   color: #64748b;
 }
 
 .case-list {
   display: grid;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 18px;
 }
 
 .case-list button,
 .controls button {
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  background: #f8fafc;
-  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.95);
+  padding: 12px 14px;
   text-align: left;
+  color: #0f172a;
+}
+
+.case-list button strong {
+  display: block;
+  margin-bottom: 3px;
 }
 
 .case-list button.is-active {
-  background: #dbeafe;
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
   border-color: #60a5fa;
+  box-shadow: 0 8px 30px rgba(37, 99, 235, 0.12);
 }
 
 .canvas {
@@ -89,7 +97,7 @@ body {
   align-content: start;
 }
 
-.header {
+.hero {
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -97,36 +105,78 @@ body {
 }
 
 .chips,
-.stats {
+.schema-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.chip {
-  padding: 4px 8px;
+.chip,
+.schema-chip {
+  padding: 5px 10px;
   background: #e2e8f0;
   border-radius: 999px;
   font-size: 12px;
 }
 
-.chart,
+.visual-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.8fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.chart-card,
+.schema-card,
 .timeline,
 .controls {
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  padding: 14px;
 }
 
-.stats {
-  margin-top: 12px;
-  justify-content: space-between;
+.chart-card {
+  overflow: hidden;
 }
 
-.stats > div {
+.chart-card svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.schema-card {
   display: grid;
-  gap: 4px;
-  min-width: 100px;
+  gap: 12px;
+  align-content: start;
+}
+
+.schema-card h3 {
+  font-size: 18px;
+}
+
+.schema-note {
+  font-size: 13px;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.status-tile {
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.95));
+  display: grid;
+  gap: 6px;
+}
+
+.status-tile strong {
+  font-size: 20px;
 }
 
 .timeline ol {
@@ -138,9 +188,26 @@ body {
   margin-bottom: 8px;
 }
 
+.event-schema_changed {
+  color: #7c3aed;
+}
+
+.event-trial_pruned {
+  color: #b91c1c;
+}
+
+.event-best_updated {
+  color: #1d4ed8;
+}
+
 .controls {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+}
+
+.controls button {
+  min-width: 88px;
+  text-align: center;
 }
 
 .api-list {
@@ -148,8 +215,13 @@ body {
   padding-left: 18px;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
   .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .visual-grid,
+  .status-grid {
     grid-template-columns: 1fr;
   }
 }

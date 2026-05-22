@@ -1,73 +1,141 @@
+export type SchemaPhase = {
+  label: string;
+  kind: "add" | "remove" | "keep";
+  params: string[];
+};
+
 export type DemoCase = {
   id: string;
   title: string;
   summary: string;
   tags: string[];
   searchSpace: string[];
-  objectiveProfile: "fast" | "noisy" | "multimodal" | "plateau";
+  objectiveProfile: "breakout" | "mean_reversion" | "risk" | "schema";
   pruneProfile: "light" | "heavy" | "late";
   convergenceProfile: "quick" | "slow" | "oscillating";
   notes: string;
+  schemaPhases: SchemaPhase[];
 };
 
 const CASES: DemoCase[] = [
   {
-    id: "fast_converge",
-    title: "Fast Convergence",
-    summary: "A smooth landscape that locks onto the optimum early.",
-    tags: ["easy", "converges"],
-    searchSpace: ["x: int[0,10]", "y: float[0,1]"],
-    objectiveProfile: "fast",
+    id: "breakout_entry",
+    title: "Breakout Entry",
+    summary: "Tune a breakout system that trades when price escapes a range.",
+    tags: ["trend", "entry", "risk"],
+    searchSpace: [
+      "entry_threshold: float[0.01,0.05]",
+      "lookback_bars: int[20,120]",
+      "stop_loss_pct: float[0.3,2.0]",
+      "take_profit_pct: float[0.5,4.0]",
+      "cooldown_bars: int[0,12]",
+    ],
+    objectiveProfile: "breakout",
     pruneProfile: "light",
     convergenceProfile: "quick",
-    notes: "Useful for showing the happy path.",
+    notes: "Shows a relatively clean parameter surface with a clear best region.",
+    schemaPhases: [
+      {
+        label: "Base breakout schema",
+        kind: "keep",
+        params: [
+          "entry_threshold",
+          "lookback_bars",
+          "stop_loss_pct",
+          "take_profit_pct",
+          "cooldown_bars",
+        ],
+      },
+    ],
   },
   {
-    id: "prune_heavy",
-    title: "Prune Heavy",
-    summary: "Most early trials are cut before completion.",
-    tags: ["pruning", "short-circuit"],
-    searchSpace: ["x: int[0,20]", "y: float[0,1]"],
-    objectiveProfile: "noisy",
+    id: "mean_reversion",
+    title: "Mean Reversion",
+    summary: "Tune a contrarian setup that fades stretched moves.",
+    tags: ["oscillation", "pruning", "signals"],
+    searchSpace: [
+      "z_window: int[10,80]",
+      "z_entry: float[1.0,3.5]",
+      "z_exit: float[0.2,1.5]",
+      "max_hold_bars: int[2,24]",
+      "volatility_filter: float[0.0,1.0]",
+    ],
+    objectiveProfile: "mean_reversion",
     pruneProfile: "heavy",
-    convergenceProfile: "slow",
-    notes: "Shows frequent early exits and best-updated recovery.",
-  },
-  {
-    id: "noisy_landscape",
-    title: "Noisy Landscape",
-    summary: "Scores wobble before the sampler settles.",
-    tags: ["noise", "oscillation"],
-    searchSpace: ["x: int[0,30]", "temperature: float[0,2]"],
-    objectiveProfile: "noisy",
-    pruneProfile: "light",
     convergenceProfile: "oscillating",
-    notes: "Keeps the curve moving so the demo can show uncertainty.",
+    notes: "Good for showing noisy search, prune-heavy runs, and unstable intermediate results.",
+    schemaPhases: [
+      {
+        label: "Initial mean reversion schema",
+        kind: "keep",
+        params: ["z_window", "z_entry", "z_exit", "max_hold_bars", "volatility_filter"],
+      },
+    ],
   },
   {
-    id: "multi_modal",
-    title: "Multi Modal",
-    summary: "Several local optima compete before one wins.",
-    tags: ["local-minima", "exploration"],
-    searchSpace: ["x: int[0,40]", "y: float[0,1]"],
-    objectiveProfile: "multimodal",
+    id: "risk_guard",
+    title: "Risk Guard",
+    summary: "Tune risk limits that constrain position size and exposure.",
+    tags: ["risk", "caps", "safety"],
+    searchSpace: [
+      "volatility_window: int[10,120]",
+      "position_size_cap: float[0.01,0.20]",
+      "max_dd: float[0.05,0.30]",
+      "slippage_limit: float[0.0,0.50]",
+      "halt_threshold: float[0.10,0.40]",
+    ],
+    objectiveProfile: "risk",
     pruneProfile: "late",
     convergenceProfile: "slow",
-    notes: "Demonstrates exploration before exploitation.",
+    notes: "Shows a conservative surface where feasible regions are narrow and reward comes from avoiding bad settings.",
+    schemaPhases: [
+      {
+        label: "Risk guard schema",
+        kind: "keep",
+        params: ["volatility_window", "position_size_cap", "max_dd", "slippage_limit", "halt_threshold"],
+      },
+    ],
   },
   {
-    id: "plateau_then_drop",
-    title: "Plateau Then Drop",
-    summary: "The search stalls, then suddenly finds a much better region.",
-    tags: ["plateau", "late-breakthrough"],
-    searchSpace: ["x: int[0,50]", "cooldown: float[0,1]"],
-    objectiveProfile: "plateau",
+    id: "schema_evolution",
+    title: "Schema Evolution",
+    summary: "Demonstrate adding and removing parameters while a tuning run stays interpretable.",
+    tags: ["schema-change", "add/remove", "demo"],
+    searchSpace: [
+      "entry_threshold: float[0.01,0.05]",
+      "stop_loss_pct: float[0.3,2.0]",
+      "take_profit_pct: float[0.5,4.0]",
+      "trailing_stop_pct: float[0.1,1.2]",
+      "volatility_filter: float[0.0,1.0]",
+    ],
+    objectiveProfile: "schema",
     pruneProfile: "late",
     convergenceProfile: "slow",
-    notes: "Useful for showing why patience matters.",
+    notes: "The main teaching case for how a tuner handles search-space edits.",
+    schemaPhases: [
+      {
+        label: "Phase 1: baseline",
+        kind: "keep",
+        params: ["entry_threshold", "stop_loss_pct", "take_profit_pct"],
+      },
+      {
+        label: "Phase 2: add trailing stop",
+        kind: "add",
+        params: ["entry_threshold", "stop_loss_pct", "take_profit_pct", "trailing_stop_pct"],
+      },
+      {
+        label: "Phase 3: remove take profit",
+        kind: "remove",
+        params: ["entry_threshold", "stop_loss_pct", "trailing_stop_pct", "volatility_filter"],
+      },
+    ],
   },
 ];
 
 export function getCases(): DemoCase[] {
   return CASES.slice();
+}
+
+export function getCaseById(caseId: string): DemoCase | undefined {
+  return CASES.find((item) => item.id === caseId);
 }

@@ -15,9 +15,15 @@ describe("case bootstrap", () => {
     ]);
   });
 
-  it("loads at least one synthetic demo case", () => {
+  it("loads the trading and schema evolution demo cases", () => {
     const cases = getCases();
-    expect(cases.length).toBeGreaterThan(0);
-    expect(cases[0].id).toBe("fast_converge");
+    expect(cases.map((item) => item.id)).toEqual([
+      "breakout_entry",
+      "mean_reversion",
+      "risk_guard",
+      "schema_evolution",
+    ]);
+    expect(cases[0].searchSpace).toContain("entry_threshold: float[0.01,0.05]");
+    expect(cases[3].tags).toContain("schema-change");
   });
 });
