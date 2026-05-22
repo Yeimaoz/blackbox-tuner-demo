@@ -79,6 +79,8 @@ function renderChart(state: PlaybackState) {
   const linePoints = completed
     .map((item) => `${trialToX(item.trial, state.events.length)} ${scoreToY(item.score, minScore, maxScore)}`)
     .join(" ");
+  const xAxisLabel = "trial / search progress";
+  const yAxisLabel = "objective score (higher is better)";
 
   return `
     <svg data-main-chart viewBox="0 0 480 280" role="img" aria-label="${activeCase.title} tuning trajectory">
@@ -92,9 +94,11 @@ function renderChart(state: PlaybackState) {
       <line x1="60" y1="220" x2="430" y2="220" stroke="#cbd5e1" stroke-width="2"></line>
       <line x1="60" y1="60" x2="60" y2="220" stroke="#cbd5e1" stroke-width="2"></line>
       <text x="60" y="42" fill="#334155" font-size="14" font-weight="700">${activeCase.title}</text>
-      <text x="60" y="260" fill="#64748b" font-size="11">trial progression</text>
+      <text x="240" y="258" text-anchor="middle" fill="#475569" font-size="12">${xAxisLabel}</text>
+      <text x="18" y="142" transform="rotate(-90 18 142)" text-anchor="middle" fill="#475569" font-size="12">${yAxisLabel}</text>
       <text x="20" y="220" fill="#64748b" font-size="11">low</text>
       <text x="20" y="70" fill="#64748b" font-size="11">high</text>
+      <text x="68" y="58" fill="#64748b" font-size="11">best-so-far line</text>
       ${linePoints ? `<polyline points="${linePoints}" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>` : ""}
       ${completed
         .map(
