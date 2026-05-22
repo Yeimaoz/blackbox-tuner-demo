@@ -126,6 +126,12 @@ body {
   align-items: stretch;
 }
 
+.right-stack {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
 .chart-card,
 .schema-card,
 .timeline,
@@ -157,6 +163,25 @@ body {
 }
 
 .schema-note {
+  font-size: 13px;
+}
+
+.trial-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+}
+
+.trial-card h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.trial-meta {
+  color: #475569;
   font-size: 13px;
 }
 

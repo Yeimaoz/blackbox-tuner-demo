@@ -145,6 +145,53 @@ function renderSchema(caseInfo: DemoCase, visibleEvents: PlaybackState["events"]
   `;
 }
 
+function renderCurrentTrial(state: PlaybackState) {
+  const started = new Map<number, Record<string, number>>();
+  let current:
+    | { kind: "completed" | "pruned" | "started"; trial: number; score?: number; reason?: string; params: Record<string, number> }
+    | null = null;
+
+  for (const event of state.events.slice(0, state.cursor)) {
+    if (event.type === "trial_started") {
+      started.set(event.trial, event.params);
+      current = { kind: "started", trial: event.trial, params: event.params };
+    } else if (event.type === "trial_completed") {
+      current = { kind: "completed", trial: event.trial, score: event.score, params: started.get(event.trial) ?? {} };
+    } else if (event.type === "trial_pruned") {
+      current = { kind: "pruned", trial: event.trial, reason: event.reason, params: started.get(event.trial) ?? {} };
+    }
+  }
+
+  if (!current) {
+    return `
+      <div class="trial-card">
+        <div class="eyebrow">Current trial</div>
+        <h3>Waiting to start</h3>
+        <p>No trial has run yet.</p>
+      </div>
+    `;
+  }
+
+  const paramChips = Object.entries(current.params)
+    .map(([name, value]) => `<span class="schema-chip">${name}: ${Number.isInteger(value) ? value : value.toFixed(2)}</span>`)
+    .join("");
+
+  return `
+    <div class="trial-card">
+      <div class="eyebrow">Current trial</div>
+      <h3>Trial ${current.trial} · ${current.kind}</h3>
+      <div class="schema-grid">${paramChips}</div>
+      ${
+        current.kind === "completed"
+          ? `<div class="trial-meta">score ${current.score?.toFixed(2)}</div>`
+          : current.kind === "pruned"
+            ? `<div class="trial-meta">pruned: ${current.reason}</div>`
+            : `<div class="trial-meta">running with current parameters</div>`
+      }
+    </div>
+  `;
+}
+
 export function mountApp(root: HTMLElement | null) {
   if (!root) return;
 
@@ -177,7 +224,10 @@ export function mountApp(root: HTMLElement | null) {
           <div class="chart-title">Tuning trajectory</div>
           <div data-chart></div>
         </div>
-        <div class="schema-card" data-schema></div>
+        <div class="right-stack">
+          <div class="schema-card" data-schema></div>
+          <div data-trial-detail></div>
+        </div>
       </div>
       <div class="status-grid">
         <div class="status-tile"><span>Cursor</span><strong data-cursor></strong></div>
@@ -211,6 +261,7 @@ export function mountApp(root: HTMLElement | null) {
   const tags = shell.querySelector<HTMLElement>("[data-tags]");
   const chart = shell.querySelector<HTMLElement>("[data-chart]");
   const schema = shell.querySelector<HTMLElement>("[data-schema]");
+  const trialDetail = shell.querySelector<HTMLElement>("[data-trial-detail]");
   const cursor = shell.querySelector<HTMLElement>("[data-cursor]");
   const best = shell.querySelector<HTMLElement>("[data-best]");
   const mode = shell.querySelector<HTMLElement>("[data-mode]");
@@ -219,7 +270,7 @@ export function mountApp(root: HTMLElement | null) {
   const stepButton = shell.querySelector<HTMLButtonElement>("[data-step]");
   const resetButton = shell.querySelector<HTMLButtonElement>("[data-reset]");
 
-  if (!caseList || !caseTitle || !caseSummary || !tags || !chart || !schema || !cursor || !best || !mode || !timeline || !playButton || !stepButton || !resetButton) {
+  if (!caseList || !caseTitle || !caseSummary || !tags || !chart || !schema || !trialDetail || !cursor || !best || !mode || !timeline || !playButton || !stepButton || !resetButton) {
     return;
   }
 
@@ -231,6 +282,7 @@ export function mountApp(root: HTMLElement | null) {
     tags.innerHTML = activeCase.tags.map((tag) => `<span class="chip">${tag}</span>`).join("");
     chart.innerHTML = renderChart(state);
     schema.innerHTML = renderSchema(activeCase, visibleEvents);
+    trialDetail.innerHTML = renderCurrentTrial(state);
     cursor.textContent = `${state.cursor}/${state.events.length}`;
     best.textContent = state.bestScore === null ? "—" : state.bestScore.toFixed(2);
     mode.textContent = state.cursor >= state.events.length ? "complete" : "playing";

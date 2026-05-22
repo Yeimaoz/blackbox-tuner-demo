@@ -9,6 +9,7 @@ describe("engine", () => {
     expect(types[0]).toBe("run_started");
     expect(types).toContain("trial_pruned");
     expect(types).toContain("best_updated");
+    expect(types.filter((type) => type === "trial_started").length).toBeGreaterThanOrEqual(8);
     expect(types.at(-1)).toBe("run_completed");
   });
 

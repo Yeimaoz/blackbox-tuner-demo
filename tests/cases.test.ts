@@ -25,5 +25,6 @@ describe("case bootstrap", () => {
     ]);
     expect(cases[0].searchSpace).toContain("entry_threshold: float[0.01,0.05]");
     expect(cases[3].tags).toContain("schema-change");
+    expect(cases[3].schemaPhases.map((phase) => phase.kind)).toEqual(["keep", "add", "remove"]);
   });
 });
