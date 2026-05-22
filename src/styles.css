@@ -1,0 +1,29 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, sans-serif;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: #f5f7fb;
+  color: #111827;
+}
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+
+.panel {
+  padding: 24px 28px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  background: white;
+}
