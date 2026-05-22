@@ -24,7 +24,7 @@ export function mountApp(root: HTMLElement | null) {
     <aside class="rail">
       <div class="brand">
         <div class="eyebrow">Demo</div>
-        <h1>blackbox-tuner</h1>
+        <h1>blackbox-tuner demo</h1>
         <p>Optuna-style tuning cases with pruning and convergence playback.</p>
       </div>
       <div class="case-list" data-case-list></div>

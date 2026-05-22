@@ -14,3 +14,10 @@ npm run dev
 ```bash
 npm run build
 ```
+
+## Test
+
+```bash
+npm test
+npm run test:e2e
+```
