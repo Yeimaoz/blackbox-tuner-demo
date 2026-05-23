@@ -9,6 +9,20 @@ type TrialPoint = {
   params: Record<string, number>;
 };
 
+type TrialHistoryEntry = {
+  trial: number;
+  kind: "started" | "completed" | "pruned";
+  params: Record<string, number>;
+  score?: number;
+  reason?: string;
+};
+
+type ParamSpec = {
+  name: string;
+  min: number;
+  max: number;
+};
+
 function eventLabel(event: PlaybackState["events"][number]) {
   if (event.type === "run_started") return "run started";
   if (event.type === "schema_changed") return `${event.label}`;
@@ -17,6 +31,98 @@ function eventLabel(event: PlaybackState["events"][number]) {
   if (event.type === "trial_pruned") return `trial ${event.trial} pruned`;
   if (event.type === "best_updated") return `best updated @ trial ${event.trial}`;
   return "run completed";
+}
+
+function parseSearchSpace(searchSpace: string[]) {
+  return searchSpace
+    .map((entry) => {
+      const [rawName, rawSpec] = entry.split(":");
+      const name = rawName?.trim();
+      const match = rawSpec?.trim().match(/^(int|float)\[(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)\]$/);
+
+      if (!name || !match) return null;
+
+      return {
+        name,
+        min: Number(match[2]),
+        max: Number(match[3]),
+      } satisfies ParamSpec;
+    })
+    .filter((item): item is ParamSpec => item !== null);
+}
+
+function summarizeTrials(events: PlaybackState["events"]) {
+  const history: TrialHistoryEntry[] = [];
+  const byTrial = new Map<number, TrialHistoryEntry>();
+
+  for (const event of events) {
+    if (event.type === "trial_started") {
+      const entry: TrialHistoryEntry = {
+        trial: event.trial,
+        kind: "started",
+        params: event.params,
+      };
+      history.push(entry);
+      byTrial.set(event.trial, entry);
+    } else if (event.type === "trial_completed") {
+      const entry = byTrial.get(event.trial);
+      if (entry) {
+        entry.kind = "completed";
+        entry.score = event.score;
+      }
+    } else if (event.type === "trial_pruned") {
+      const entry = byTrial.get(event.trial);
+      if (entry) {
+        entry.kind = "pruned";
+        entry.reason = event.reason;
+      }
+    }
+  }
+
+  return history;
+}
+
+function formatSignedDelta(value: number) {
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${value.toFixed(2)}`;
+}
+
+function driftLabel(delta: number, spec?: ParamSpec) {
+  const span = spec ? spec.max - spec.min : null;
+  if (!span || span <= 0) return "jump";
+  const ratio = Math.abs(delta) / span;
+  if (ratio >= 0.35) return "big jump";
+  if (ratio >= 0.15) return "noticeable";
+  return "small move";
+}
+
+function compareParams(
+  current: Record<string, number>,
+  previous: Record<string, number> | undefined,
+  specs: ParamSpec[],
+) {
+  if (!previous) return [];
+
+  const specMap = new Map(specs.map((spec) => [spec.name, spec]));
+  return Object.keys(current)
+    .map((name) => {
+      const currentValue = current[name];
+      const previousValue = previous[name] ?? currentValue;
+      const delta = currentValue - previousValue;
+      const spec = specMap.get(name);
+      const span = spec ? spec.max - spec.min : 0;
+      const normalized = span > 0 ? Math.abs(delta) / span : Math.abs(delta);
+
+      return {
+        name,
+        currentValue,
+        previousValue,
+        delta,
+        normalized,
+        spec,
+      };
+    })
+    .sort((a, b) => b.normalized - a.normalized);
 }
 
 function activeSchema(caseInfo: DemoCase, visibleEvents: PlaybackState["events"]) {
@@ -145,22 +251,10 @@ function renderSchema(caseInfo: DemoCase, visibleEvents: PlaybackState["events"]
   `;
 }
 
-function renderCurrentTrial(state: PlaybackState) {
-  const started = new Map<number, Record<string, number>>();
-  let current:
-    | { kind: "completed" | "pruned" | "started"; trial: number; score?: number; reason?: string; params: Record<string, number> }
-    | null = null;
-
-  for (const event of state.events.slice(0, state.cursor)) {
-    if (event.type === "trial_started") {
-      started.set(event.trial, event.params);
-      current = { kind: "started", trial: event.trial, params: event.params };
-    } else if (event.type === "trial_completed") {
-      current = { kind: "completed", trial: event.trial, score: event.score, params: started.get(event.trial) ?? {} };
-    } else if (event.type === "trial_pruned") {
-      current = { kind: "pruned", trial: event.trial, reason: event.reason, params: started.get(event.trial) ?? {} };
-    }
-  }
+function renderCurrentTrial(caseInfo: DemoCase, state: PlaybackState) {
+  const trials = summarizeTrials(state.events.slice(0, state.cursor));
+  const current = trials.at(-1);
+  const previous = trials.at(-2);
 
   if (!current) {
     return `
@@ -172,18 +266,48 @@ function renderCurrentTrial(state: PlaybackState) {
     `;
   }
 
+  const paramSpecs = parseSearchSpace(caseInfo.searchSpace);
   const paramChips = Object.entries(current.params)
     .map(([name, value]) => `<span class="schema-chip">${name}: ${Number.isInteger(value) ? value : value.toFixed(2)}</span>`)
     .join("");
+  const diffs = compareParams(current.params, previous?.params, paramSpecs).slice(0, 3);
+  const diffRows = previous
+    ? diffs
+        .map(
+          (item) => `
+            <div class="drift-row">
+              <div>
+                <strong>${item.name}</strong>
+                <span>${formatSignedDelta(item.delta)} vs trial ${previous.trial}</span>
+              </div>
+              <em class="drift-pill drift-${driftLabel(item.delta, item.spec).replace(/\s+/g, "-")}">${driftLabel(item.delta, item.spec)}</em>
+            </div>
+          `,
+        )
+        .join("")
+    : `<div class="drift-empty">First sampled trial. No prior reference.</div>`;
+
+  const previousCompleted = [...trials.slice(0, -1)].reverse().find((entry) => entry.kind === "completed" && typeof entry.score === "number");
+  const scoreDelta =
+    current.kind === "completed" && previousCompleted?.score !== undefined
+      ? current.score - previousCompleted.score
+      : null;
 
   return `
     <div class="trial-card">
       <div class="eyebrow">Current trial</div>
       <h3>Trial ${current.trial} · ${current.kind}</h3>
       <div class="schema-grid">${paramChips}</div>
+      <div class="trial-drift">
+        <div class="trial-drift-head">
+          <span>Parameter moves vs previous trial</span>
+          ${previous ? `<strong>Trial ${previous.trial}</strong>` : ""}
+        </div>
+        ${diffRows}
+      </div>
       ${
         current.kind === "completed"
-          ? `<div class="trial-meta">score ${current.score?.toFixed(2)}</div>`
+          ? `<div class="trial-meta">score ${current.score?.toFixed(2)}${scoreDelta !== null ? ` · ${formatSignedDelta(scoreDelta)} vs previous completed` : ""}</div>`
           : current.kind === "pruned"
             ? `<div class="trial-meta">pruned: ${current.reason}</div>`
             : `<div class="trial-meta">running with current parameters</div>`
@@ -282,7 +406,7 @@ export function mountApp(root: HTMLElement | null) {
     tags.innerHTML = activeCase.tags.map((tag) => `<span class="chip">${tag}</span>`).join("");
     chart.innerHTML = renderChart(state);
     schema.innerHTML = renderSchema(activeCase, visibleEvents);
-    trialDetail.innerHTML = renderCurrentTrial(state);
+    trialDetail.innerHTML = renderCurrentTrial(activeCase, state);
     cursor.textContent = `${state.cursor}/${state.events.length}`;
     best.textContent = state.bestScore === null ? "—" : state.bestScore.toFixed(2);
     mode.textContent = state.cursor >= state.events.length ? "complete" : "playing";
