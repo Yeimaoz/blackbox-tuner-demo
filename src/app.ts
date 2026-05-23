@@ -1,5 +1,5 @@
 import { API_OVERLAY_COPY } from "./api-copy";
-import { getCaseById, getCases, type DemoCase } from "./cases";
+import { getCaseById, getCases, type DemoCase, type ParamInsight } from "./cases";
 import { createPlaybackState, stepPlayback, switchPlaybackCase, type PlaybackState } from "./render";
 
 type TrialPoint = {
@@ -21,6 +21,10 @@ type ParamSpec = {
   name: string;
   min: number;
   max: number;
+};
+
+type ImpactRow = ParamInsight & {
+  active: boolean;
 };
 
 function eventLabel(event: PlaybackState["events"][number]) {
@@ -123,6 +127,54 @@ function compareParams(
       };
     })
     .sort((a, b) => b.normalized - a.normalized);
+}
+
+function impactRank(importance: ImpactRow["importance"]) {
+  if (importance === "high") return 0;
+  if (importance === "medium") return 1;
+  if (importance === "low") return 2;
+  return 3;
+}
+
+function renderImpactBars(caseInfo: DemoCase, visibleEvents: PlaybackState["events"]) {
+  const active = new Set(activeSchema(caseInfo, visibleEvents));
+  const currentPhase = visibleEvents.filter((event) => event.type === "schema_changed").at(-1);
+  const rows: ImpactRow[] = caseInfo.paramInsights
+    .map((item) => ({
+      ...item,
+      active: active.has(item.name),
+    }))
+    .sort((a, b) => impactRank(a.importance) - impactRank(b.importance));
+
+  return `
+    <div class="impact-panel">
+      <div class="impact-head">
+        <div>
+          <div class="eyebrow">Parameter impact</div>
+          <h4>Which params matter here</h4>
+        </div>
+        <span class="impact-caption">${currentPhase?.kind === "remove" ? "inactive = removed in this phase" : "bars are relative, not absolute truth"}</span>
+      </div>
+      <div class="impact-list">
+        ${rows
+          .map((row) => {
+            const importance = row.active ? row.importance : "inactive";
+            const width = importance === "high" ? 100 : importance === "medium" ? 72 : importance === "low" ? 38 : 14;
+            return `
+              <div class="impact-row impact-${importance}">
+                <div class="impact-labels">
+                  <strong>${row.name}</strong>
+                  <span>${row.note}</span>
+                </div>
+                <div class="impact-meter"><div class="impact-bar" style="width:${width}%"></div></div>
+                <em>${importance}${!row.active ? " this phase" : ""}</em>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </div>
+  `;
 }
 
 function activeSchema(caseInfo: DemoCase, visibleEvents: PlaybackState["events"]) {
@@ -247,6 +299,7 @@ function renderSchema(caseInfo: DemoCase, visibleEvents: PlaybackState["events"]
         ${active.map((param) => `<span class="schema-chip">${param}</span>`).join("")}
       </div>
       <div class="schema-note">${currentPhase?.kind ?? "keep"} schema</div>
+      ${renderImpactBars(caseInfo, visibleEvents)}
     </div>
   `;
 }
@@ -289,7 +342,7 @@ function renderCurrentTrial(caseInfo: DemoCase, state: PlaybackState) {
 
   const previousCompleted = [...trials.slice(0, -1)].reverse().find((entry) => entry.kind === "completed" && typeof entry.score === "number");
   const scoreDelta =
-    current.kind === "completed" && previousCompleted?.score !== undefined
+    current.kind === "completed" && previousCompleted?.score !== undefined && current.score !== undefined
       ? current.score - previousCompleted.score
       : null;
 

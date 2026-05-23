@@ -167,6 +167,97 @@ body {
   font-size: 13px;
 }
 
+.impact-panel {
+  display: grid;
+  gap: 10px;
+  padding-top: 6px;
+}
+
+.impact-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.impact-head h4 {
+  margin: 3px 0 0;
+  font-size: 14px;
+}
+
+.impact-caption {
+  color: #64748b;
+  font-size: 11px;
+  max-width: 140px;
+  text-align: right;
+}
+
+.impact-list {
+  display: grid;
+  gap: 8px;
+}
+
+.impact-row {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.impact-labels {
+  display: grid;
+  gap: 2px;
+}
+
+.impact-labels strong {
+  font-size: 13px;
+}
+
+.impact-labels span {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.impact-meter {
+  height: 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.impact-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #60a5fa, #2563eb);
+}
+
+.impact-row em {
+  font-style: normal;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #475569;
+}
+
+.impact-high .impact-bar {
+  background: linear-gradient(90deg, #93c5fd, #2563eb);
+}
+
+.impact-medium .impact-bar {
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+}
+
+.impact-low .impact-bar {
+  background: linear-gradient(90deg, #cbd5e1, #94a3b8);
+}
+
+.impact-inactive .impact-bar {
+  background: linear-gradient(90deg, #e2e8f0, #cbd5e1);
+}
+
 .trial-card {
   display: grid;
   gap: 12px;

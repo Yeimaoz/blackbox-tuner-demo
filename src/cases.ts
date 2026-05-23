@@ -4,6 +4,12 @@ export type SchemaPhase = {
   params: string[];
 };
 
+export type ParamInsight = {
+  name: string;
+  importance: "high" | "medium" | "low" | "inactive";
+  note: string;
+};
+
 export type DemoCase = {
   id: string;
   title: string;
@@ -15,6 +21,7 @@ export type DemoCase = {
   convergenceProfile: "quick" | "slow" | "oscillating";
   notes: string;
   schemaPhases: SchemaPhase[];
+  paramInsights: ParamInsight[];
 };
 
 const CASES: DemoCase[] = [
@@ -34,6 +41,13 @@ const CASES: DemoCase[] = [
     pruneProfile: "light",
     convergenceProfile: "quick",
     notes: "Shows a relatively clean parameter surface with a clear best region.",
+    paramInsights: [
+      { name: "entry_threshold", importance: "high", note: "drives breakout timing" },
+      { name: "lookback_bars", importance: "medium", note: "smooths the reference range" },
+      { name: "stop_loss_pct", importance: "high", note: "strong impact on downside control" },
+      { name: "take_profit_pct", importance: "medium", note: "helps, but not the dominant driver" },
+      { name: "cooldown_bars", importance: "low", note: "often changes without moving score much" },
+    ],
     schemaPhases: [
       {
         label: "Base breakout schema",
@@ -64,6 +78,13 @@ const CASES: DemoCase[] = [
     pruneProfile: "heavy",
     convergenceProfile: "oscillating",
     notes: "Good for showing noisy search, prune-heavy runs, and unstable intermediate results.",
+    paramInsights: [
+      { name: "z_window", importance: "medium", note: "changes the smoothing window" },
+      { name: "z_entry", importance: "high", note: "main trigger for signal strength" },
+      { name: "z_exit", importance: "low", note: "exit threshold is usually secondary" },
+      { name: "max_hold_bars", importance: "medium", note: "limits trade duration but rarely dominates" },
+      { name: "volatility_filter", importance: "low", note: "helps, but often does little in this run" },
+    ],
     schemaPhases: [
       {
         label: "Initial mean reversion schema",
@@ -88,6 +109,13 @@ const CASES: DemoCase[] = [
     pruneProfile: "late",
     convergenceProfile: "slow",
     notes: "Shows a conservative surface where feasible regions are narrow and reward comes from avoiding bad settings.",
+    paramInsights: [
+      { name: "volatility_window", importance: "high", note: "changes regime detection quality" },
+      { name: "position_size_cap", importance: "high", note: "directly controls risk exposure" },
+      { name: "max_dd", importance: "high", note: "strongly constrains feasible candidates" },
+      { name: "slippage_limit", importance: "low", note: "often inactive unless execution is stressed" },
+      { name: "halt_threshold", importance: "medium", note: "matters mainly in extreme scenarios" },
+    ],
     schemaPhases: [
       {
         label: "Risk guard schema",
@@ -112,6 +140,13 @@ const CASES: DemoCase[] = [
     pruneProfile: "late",
     convergenceProfile: "slow",
     notes: "The main teaching case for how a tuner handles search-space edits.",
+    paramInsights: [
+      { name: "entry_threshold", importance: "high", note: "still matters across all phases" },
+      { name: "stop_loss_pct", importance: "medium", note: "useful, but not the only driver" },
+      { name: "take_profit_pct", importance: "inactive", note: "removed after phase 3" },
+      { name: "trailing_stop_pct", importance: "high", note: "becomes important after the add phase" },
+      { name: "volatility_filter", importance: "low", note: "only starts to matter in the final phase" },
+    ],
     schemaPhases: [
       {
         label: "Phase 1: baseline",
