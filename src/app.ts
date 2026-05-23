@@ -396,15 +396,13 @@ export function mountApp(root: HTMLElement | null) {
         </div>
         <div class="chips" data-tags></div>
       </div>
-      <div class="visual-grid">
-        <div class="chart-card">
-          <div class="chart-title">Tuning trajectory</div>
-          <div data-chart></div>
-        </div>
-        <div class="right-stack">
-          <div class="schema-card" data-schema></div>
-          <div data-trial-detail></div>
-        </div>
+      <div class="chart-card chart-card-main">
+        <div class="chart-title">Tuning trajectory</div>
+        <div data-chart></div>
+      </div>
+      <div class="detail-stack">
+        <div data-trial-detail></div>
+        <div class="schema-card" data-schema></div>
       </div>
       <div class="status-grid">
         <div class="status-tile"><span>Cursor</span><strong data-cursor></strong></div>

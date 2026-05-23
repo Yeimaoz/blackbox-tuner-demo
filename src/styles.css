@@ -120,19 +120,6 @@ body {
   font-size: 12px;
 }
 
-.visual-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.8fr);
-  gap: 16px;
-  align-items: stretch;
-}
-
-.right-stack {
-  display: grid;
-  gap: 14px;
-  align-content: start;
-}
-
 .chart-card,
 .schema-card,
 .timeline,
@@ -147,10 +134,20 @@ body {
   overflow: hidden;
 }
 
+.chart-card-main {
+  display: grid;
+  gap: 10px;
+}
+
 .chart-card svg {
   width: 100%;
   height: auto;
   display: block;
+}
+
+.detail-stack {
+  display: grid;
+  gap: 14px;
 }
 
 .schema-card {
