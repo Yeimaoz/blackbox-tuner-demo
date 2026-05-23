@@ -95,6 +95,7 @@ body {
   display: grid;
   gap: 16px;
   align-content: start;
+  min-height: calc(100vh - 32px);
 }
 
 .hero {
@@ -207,6 +208,8 @@ body {
 .timeline ol {
   margin: 12px 0 0;
   padding-left: 18px;
+  max-height: 220px;
+  overflow: auto;
 }
 
 .event {
@@ -228,6 +231,10 @@ body {
 .controls {
   display: flex;
   gap: 10px;
+  position: sticky;
+  bottom: 16px;
+  z-index: 1;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 }
 
 .controls button {
