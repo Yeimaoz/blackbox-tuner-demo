@@ -9,6 +9,18 @@ test("loads the first demo case", async ({ page }) => {
   await expect(page.getByText("Current trial")).toBeVisible();
   await expect(page.getByText("trial / search progress")).toBeVisible();
   await expect(page.getByText("objective score (higher is better)")).toBeVisible();
+
+  // At cursor=0 the chart is empty of data points — advance one step so there
+  // is at least one event to assert on.
+  const stepButton = page.locator("[data-step]");
+  await stepButton.click();
+
+  // After stepping past the first event the cursor tile must show a non-zero
+  // value (format "N/total").
+  const cursorEl = page.locator("[data-cursor]");
+  const cursorText = await cursorEl.textContent();
+  const cursorValue = parseInt(cursorText?.split("/")[0] ?? "0", 10);
+  expect(cursorValue).toBeGreaterThan(0);
 });
 
 /**
