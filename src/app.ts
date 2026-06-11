@@ -234,8 +234,19 @@ function renderChart(state: PlaybackState) {
   const allScores = completed.map((item) => item.score);
   const minScore = Math.min(...allScores, -2);
   const maxScore = Math.max(...allScores, 2);
+
+  // Fix (High finding): the denominator must be the trial count, not the
+  // total event count. state.events includes meta-events (run_started,
+  // schema_changed, best_updated, run_completed) so state.events.length is
+  // always much larger than the actual number of trials, pushing all data
+  // points into the left third of the chart.
+  // Correct denominator = completed + pruned trial count (from the full run,
+  // not just the visible window, so the axis scale stays stable as we step).
+  const { completed: allCompleted, pruned: allPruned } = visibleTrials(state.events);
+  const trialTotal = allCompleted.length + allPruned.length;
+
   const linePoints = completed
-    .map((item) => `${trialToX(item.trial, state.events.length)} ${scoreToY(item.score, minScore, maxScore)}`)
+    .map((item) => `${trialToX(item.trial, trialTotal)} ${scoreToY(item.score, minScore, maxScore)}`)
     .join(" ");
   const xAxisLabel = "trial / search progress";
   const yAxisLabel = "objective score (higher is better)";
@@ -261,14 +272,14 @@ function renderChart(state: PlaybackState) {
       ${completed
         .map(
           (item) => `
-            <circle cx="${trialToX(item.trial, state.events.length)}" cy="${scoreToY(item.score, minScore, maxScore)}" r="6" fill="${item.trial === completed.at(-1)?.trial ? "#1d4ed8" : "#60a5fa"}" />
+            <circle cx="${trialToX(item.trial, trialTotal)}" cy="${scoreToY(item.score, minScore, maxScore)}" r="6" fill="${item.trial === completed.at(-1)?.trial ? "#1d4ed8" : "#60a5fa"}" />
           `,
         )
         .join("")}
       ${pruned
         .map(
           (item) => `
-            <g transform="translate(${trialToX(item.trial, state.events.length)}, ${160 + item.trial * 0})">
+            <g transform="translate(${trialToX(item.trial, trialTotal)}, ${160 + item.trial * 0})">
               <line x1="-7" y1="-7" x2="7" y2="7" stroke="#ef4444" stroke-width="3"></line>
               <line x1="-7" y1="7" x2="7" y2="-7" stroke="#ef4444" stroke-width="3"></line>
             </g>
