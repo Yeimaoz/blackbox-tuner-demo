@@ -133,22 +133,28 @@ export function buildEventStream(caseId: string): DemoEvent[] {
   }
 
   if (demoCase.id === "risk_guard") {
+    // Fix (High finding): all ratio params (position_size_cap, max_dd,
+    // slippage_limit, halt_threshold) must be decimal fractions matching the
+    // declared search space in cases.ts (e.g. float[0.01,0.20]).
+    // Previous values were integers (8–14, 9–18, etc.) — 60–100× too large.
+    // Divided by 100 to align with the declared proportional semantics.
+    // volatility_window stays as-is (int[10,120], already correct).
     return [
       ...baseEvents(demoCase.id),
       ...schemaEvents(demoCase.id),
       ...emitTrials(0, [
-        { params: { volatility_window: 20, position_size_cap: 8, max_dd: 15, slippage_limit: 12, halt_threshold: 20 }, score: -1.8 },
-        { params: { volatility_window: 35, position_size_cap: 10, max_dd: 14, slippage_limit: 10, halt_threshold: 22 }, score: -1.2 },
-        { params: { volatility_window: 55, position_size_cap: 12, max_dd: 12, slippage_limit: 8, halt_threshold: 24 }, score: -0.7 },
-        { params: { volatility_window: 70, position_size_cap: 11, max_dd: 11, slippage_limit: 7, halt_threshold: 26 }, reason: "risk cap violated" },
-        { params: { volatility_window: 90, position_size_cap: 9, max_dd: 10, slippage_limit: 5, halt_threshold: 28 }, score: -0.4 },
-        { params: { volatility_window: 100, position_size_cap: 8, max_dd: 9, slippage_limit: 4, halt_threshold: 30 }, reason: "halt threshold too aggressive" },
-        { params: { volatility_window: 40, position_size_cap: 14, max_dd: 18, slippage_limit: 9, halt_threshold: 24 }, score: -0.9, best: false },
-        { params: { volatility_window: 60, position_size_cap: 13, max_dd: 13, slippage_limit: 6, halt_threshold: 25 }, score: -0.2 },
-        { params: { volatility_window: 68, position_size_cap: 12, max_dd: 12, slippage_limit: 6, halt_threshold: 27 }, score: -0.18, best: false },
-        { params: { volatility_window: 84, position_size_cap: 11, max_dd: 11, slippage_limit: 5, halt_threshold: 28 }, score: -0.08 },
-        { params: { volatility_window: 76, position_size_cap: 10, max_dd: 10, slippage_limit: 4, halt_threshold: 29 }, score: -0.05, best: false },
-        { params: { volatility_window: 92, position_size_cap: 10, max_dd: 9, slippage_limit: 4, halt_threshold: 30 }, score: 0.02 },
+        { params: { volatility_window: 20, position_size_cap: 0.08, max_dd: 0.15, slippage_limit: 0.12, halt_threshold: 0.20 }, score: -1.8 },
+        { params: { volatility_window: 35, position_size_cap: 0.10, max_dd: 0.14, slippage_limit: 0.10, halt_threshold: 0.22 }, score: -1.2 },
+        { params: { volatility_window: 55, position_size_cap: 0.12, max_dd: 0.12, slippage_limit: 0.08, halt_threshold: 0.24 }, score: -0.7 },
+        { params: { volatility_window: 70, position_size_cap: 0.11, max_dd: 0.11, slippage_limit: 0.07, halt_threshold: 0.26 }, reason: "risk cap violated" },
+        { params: { volatility_window: 90, position_size_cap: 0.09, max_dd: 0.10, slippage_limit: 0.05, halt_threshold: 0.28 }, score: -0.4 },
+        { params: { volatility_window: 100, position_size_cap: 0.08, max_dd: 0.09, slippage_limit: 0.04, halt_threshold: 0.30 }, reason: "halt threshold too aggressive" },
+        { params: { volatility_window: 40, position_size_cap: 0.14, max_dd: 0.18, slippage_limit: 0.09, halt_threshold: 0.24 }, score: -0.9, best: false },
+        { params: { volatility_window: 60, position_size_cap: 0.13, max_dd: 0.13, slippage_limit: 0.06, halt_threshold: 0.25 }, score: -0.2 },
+        { params: { volatility_window: 68, position_size_cap: 0.12, max_dd: 0.12, slippage_limit: 0.06, halt_threshold: 0.27 }, score: -0.18, best: false },
+        { params: { volatility_window: 84, position_size_cap: 0.11, max_dd: 0.11, slippage_limit: 0.05, halt_threshold: 0.28 }, score: -0.08 },
+        { params: { volatility_window: 76, position_size_cap: 0.10, max_dd: 0.10, slippage_limit: 0.04, halt_threshold: 0.29 }, score: -0.05, best: false },
+        { params: { volatility_window: 92, position_size_cap: 0.10, max_dd: 0.09, slippage_limit: 0.04, halt_threshold: 0.30 }, score: 0.02 },
       ]),
       ...runCompleted(),
     ];
