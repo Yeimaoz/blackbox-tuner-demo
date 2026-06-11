@@ -31,7 +31,7 @@ const CASES: DemoCase[] = [
     summary: "Tune a breakout system that trades when price escapes a range.",
     tags: ["trend", "entry", "risk"],
     searchSpace: [
-      "entry_threshold: float[0.01,0.05]",
+      "entry_threshold: int[1,6]",
       "lookback_bars: int[20,120]",
       "stop_loss_pct: float[0.3,2.0]",
       "take_profit_pct: float[0.5,4.0]",
@@ -130,7 +130,7 @@ const CASES: DemoCase[] = [
     summary: "Demonstrate adding and removing parameters while a tuning run stays interpretable.",
     tags: ["schema-change", "add/remove", "demo"],
     searchSpace: [
-      "entry_threshold: float[0.01,0.05]",
+      "entry_threshold: int[1,6]",
       "stop_loss_pct: float[0.3,2.0]",
       "take_profit_pct: float[0.5,4.0]",
       "trailing_stop_pct: float[0.1,1.2]",

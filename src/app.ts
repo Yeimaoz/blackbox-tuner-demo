@@ -1,6 +1,15 @@
 import { API_OVERLAY_COPY } from "./api-copy";
 import { getCaseById, getCases, type DemoCase, type ParamInsight } from "./cases";
 import { createPlaybackState, stepPlayback, switchPlaybackCase, type PlaybackState } from "./render";
+import {
+  compareParams,
+  driftLabel,
+  formatSignedDelta,
+  parseSearchSpace,
+  scoreToY,
+  trialToX,
+  type ParamSpec,
+} from "./utils";
 
 type TrialPoint = {
   trial: number;
@@ -17,12 +26,6 @@ type TrialHistoryEntry = {
   reason?: string;
 };
 
-type ParamSpec = {
-  name: string;
-  min: number;
-  max: number;
-};
-
 type ImpactRow = ParamInsight & {
   active: boolean;
 };
@@ -35,24 +38,6 @@ function eventLabel(event: PlaybackState["events"][number]) {
   if (event.type === "trial_pruned") return `trial ${event.trial} pruned`;
   if (event.type === "best_updated") return `best updated @ trial ${event.trial}`;
   return "run completed";
-}
-
-function parseSearchSpace(searchSpace: string[]) {
-  return searchSpace
-    .map((entry) => {
-      const [rawName, rawSpec] = entry.split(":");
-      const name = rawName?.trim();
-      const match = rawSpec?.trim().match(/^(int|float)\[(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)\]$/);
-
-      if (!name || !match) return null;
-
-      return {
-        name,
-        min: Number(match[2]),
-        max: Number(match[3]),
-      } satisfies ParamSpec;
-    })
-    .filter((item): item is ParamSpec => item !== null);
 }
 
 function summarizeTrials(events: PlaybackState["events"]) {
@@ -84,49 +69,6 @@ function summarizeTrials(events: PlaybackState["events"]) {
   }
 
   return history;
-}
-
-function formatSignedDelta(value: number) {
-  const prefix = value > 0 ? "+" : "";
-  return `${prefix}${value.toFixed(2)}`;
-}
-
-function driftLabel(delta: number, spec?: ParamSpec) {
-  const span = spec ? spec.max - spec.min : null;
-  if (!span || span <= 0) return "jump";
-  const ratio = Math.abs(delta) / span;
-  if (ratio >= 0.35) return "big jump";
-  if (ratio >= 0.15) return "noticeable";
-  return "small move";
-}
-
-function compareParams(
-  current: Record<string, number>,
-  previous: Record<string, number> | undefined,
-  specs: ParamSpec[],
-) {
-  if (!previous) return [];
-
-  const specMap = new Map(specs.map((spec) => [spec.name, spec]));
-  return Object.keys(current)
-    .map((name) => {
-      const currentValue = current[name];
-      const previousValue = previous[name] ?? currentValue;
-      const delta = currentValue - previousValue;
-      const spec = specMap.get(name);
-      const span = spec ? spec.max - spec.min : 0;
-      const normalized = span > 0 ? Math.abs(delta) / span : Math.abs(delta);
-
-      return {
-        name,
-        currentValue,
-        previousValue,
-        delta,
-        normalized,
-        spec,
-      };
-    })
-    .sort((a, b) => b.normalized - a.normalized);
 }
 
 function impactRank(importance: ImpactRow["importance"]) {
@@ -215,18 +157,6 @@ function visibleTrials(events: PlaybackState["events"]) {
   return { completed, pruned };
 }
 
-function scoreToY(score: number, minScore: number, maxScore: number) {
-  if (maxScore === minScore) return 150;
-  const clamped = Math.max(minScore, Math.min(maxScore, score));
-  const t = (clamped - minScore) / (maxScore - minScore);
-  return 220 - t * 160;
-}
-
-function trialToX(trial: number, total: number) {
-  if (total <= 1) return 90;
-  return 70 + (trial / Math.max(1, total - 1)) * 340;
-}
-
 function renderChart(state: PlaybackState) {
   const visibleEvents = state.events.slice(0, state.cursor);
   const activeCase = getCaseById(state.caseId) ?? getCases()[0];
@@ -245,9 +175,22 @@ function renderChart(state: PlaybackState) {
   const { completed: allCompleted, pruned: allPruned } = visibleTrials(state.events);
   const trialTotal = allCompleted.length + allPruned.length;
 
-  const linePoints = completed
+  // Build the best-so-far line: keep a running maximum so the polyline is
+  // monotone non-decreasing (matching what the legend label says).
+  // A completed trial only contributes a point if its score equals or exceeds
+  // every previous completed trial's score.
+  let runningBest = -Infinity;
+  const bestSoFarPoints = completed
+    .filter((item) => {
+      if (item.score >= runningBest) {
+        runningBest = item.score;
+        return true;
+      }
+      return false;
+    })
     .map((item) => `${trialToX(item.trial, trialTotal)} ${scoreToY(item.score, minScore, maxScore)}`)
     .join(" ");
+
   const xAxisLabel = "trial / search progress";
   const yAxisLabel = "objective score (higher is better)";
 
@@ -268,7 +211,7 @@ function renderChart(state: PlaybackState) {
       <text x="20" y="220" fill="#64748b" font-size="11">low</text>
       <text x="20" y="70" fill="#64748b" font-size="11">high</text>
       <text x="68" y="58" fill="#64748b" font-size="11">best-so-far line</text>
-      ${linePoints ? `<polyline points="${linePoints}" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>` : ""}
+      ${bestSoFarPoints ? `<polyline points="${bestSoFarPoints}" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>` : ""}
       ${completed
         .map(
           (item) => `
@@ -287,11 +230,30 @@ function renderChart(state: PlaybackState) {
         )
         .join("")}
       ${
-        state.events
-          .slice(0, state.cursor)
-          .some((event) => event.type === "schema_changed")
-          ? `<line x1="220" y1="58" x2="220" y2="220" stroke="#94a3b8" stroke-dasharray="5 5" stroke-width="2"></line><text x="228" y="74" fill="#475569" font-size="11">schema change</text>`
-          : ""
+        // Draw a vertical marker for each schema_changed event that has appeared
+        // in the visible window.  The x position is computed from the trial
+        // number of the last trial that was started before (or at) the
+        // schema_changed event, so the line tracks actual playback position
+        // rather than being hardcoded at x=220.
+        (() => {
+          const eventsUpToCursor = state.events.slice(0, state.cursor);
+          const markers: string[] = [];
+          let lastTrialBeforeSchema = -1;
+          for (const evt of eventsUpToCursor) {
+            if (evt.type === "trial_started") {
+              lastTrialBeforeSchema = evt.trial;
+            }
+            if (evt.type === "schema_changed") {
+              const markerTrial = lastTrialBeforeSchema >= 0 ? lastTrialBeforeSchema : 0;
+              const xPos = trialToX(markerTrial, trialTotal);
+              markers.push(
+                `<line x1="${xPos}" y1="58" x2="${xPos}" y2="220" stroke="#94a3b8" stroke-dasharray="5 5" stroke-width="2"></line>` +
+                `<text x="${xPos + 4}" y="74" fill="#475569" font-size="11">schema change</text>`,
+              );
+            }
+          }
+          return markers.join("");
+        })()
       }
     </svg>
   `;
@@ -481,6 +443,12 @@ export function mountApp(root: HTMLElement | null) {
   };
 
   const setCase = (caseId: string) => {
+    // Stop the auto-play timer before switching so the old interval cannot
+    // continue stepping a newly-loaded case state.
+    if (timer !== null) {
+      window.clearInterval(timer);
+      timer = null;
+    }
     state = switchPlaybackCase(state, caseId);
     render();
   };
