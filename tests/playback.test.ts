@@ -11,7 +11,10 @@ describe("playback", () => {
     // breakout_entry first event is run_started (no best_updated yet), so bestScore stays null
     // after one more step we reach schema_changed; keep stepping until we get a best_updated
     const atBest = stepPlayback(stepPlayback(stepPlayback(stepPlayback(next))));
-    expect(atBest.bestScore).toBeDefined();
+    // bestScore type is `number | null`; toBeDefined() passes for null.
+    // After stepping past the first best_updated event it must be a number > 0.
+    expect(typeof atBest.bestScore).toBe("number");
+    expect(atBest.bestScore).toBeGreaterThan(0);
   });
 
   it("resets playback state when switching from breakout_entry to mean_reversion", () => {

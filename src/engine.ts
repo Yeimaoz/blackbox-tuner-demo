@@ -84,6 +84,20 @@ function emitTrials(startTrial: number, specs: TrialSpec[]): DemoEvent[] {
   return events;
 }
 
+/**
+ * Build the full event stream for a demo case.
+ *
+ * Design note — unknown caseId fallback:
+ *   If `caseId` is not found in the registry, the function falls back to
+ *   `breakout_entry` (the first registered demo case).  This is intentional
+ *   so the UI always has a valid stream to render during development or when
+ *   URL/state is stale.
+ *
+ *   Intentional consequence: the first event in the returned stream will carry
+ *   `caseId = "breakout_entry"`, while `PlaybackState.caseId` retains the
+ *   original (unknown) id passed by the caller.  `playback.test.ts` documents
+ *   and guards this behaviour.  It is a known design trade-off, not a bug.
+ */
 export function buildEventStream(caseId: string): DemoEvent[] {
   const demoCase = getCaseById(caseId) ?? getCaseById("breakout_entry");
   if (!demoCase) return [];

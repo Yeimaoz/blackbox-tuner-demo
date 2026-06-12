@@ -1,3 +1,12 @@
+/**
+ * Static display list of API surface names used in the demo overlay.
+ *
+ * NOTE: This is *static documentation copy*, not a live reflection of the
+ * blackbox-tuner package API.  It exists so the UI overlay and snapshot tests
+ * share a single source of truth for the displayed name list.  Do not infer
+ * actual package exports from this constant — consult the blackbox-tuner
+ * package itself for authoritative API shape.
+ */
 export const PUBLIC_API_NAMES = [
   "ParamSchema",
   "objective",
